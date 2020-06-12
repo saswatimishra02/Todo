@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import '../model/todo.dart';
 
-var _formkey = GlobalKey<FormState>();
-Todo newtodo = new Todo();
+import '../controllers/todo.dart';
 
 class TodoPage extends StatefulWidget {
   @override
@@ -10,8 +8,53 @@ class TodoPage extends StatefulWidget {
 }
 
 class _TodoPageState extends State<TodoPage> {
-  var _textController = new TextEditingController(text: '');
-  List<Todo> _myTodoList = [];
+  var _formkey = GlobalKey<FormState>();
+  TodoController todoController = new TodoController();
+  Widget appForm({String initialText = '', int editid}) {
+    return Dialog(
+      child: Form(
+        key: _formkey,
+        child: Column(
+          children: <Widget>[
+            Padding(
+              padding: EdgeInsets.only(left: 5, right: 5),
+              child: TextFormField(
+                initialValue: initialText,
+                decoration: InputDecoration(
+                  hintText: "Enter your task",
+                ),
+                onSaved: (String value) {
+                  todoController.newTodo.text = value;
+                },
+                validator: (value) =>
+                    value.isEmpty ? "please enter something" : null,
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.only(top: 10),
+              child: RaisedButton(
+                onPressed: () {
+                  if (_formkey.currentState.validate()) {
+                    _formkey.currentState.save();
+                    if (editid != null) {
+                      todoController.edit(
+                          todo: todoController.newTodo, editid: editid);
+                    } else {
+                      todoController.add();
+                    }
+                    Navigator.pop(context);
+                    setState(() {});
+                  }
+                  return;
+                },
+                child: Text("Submit"),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +63,7 @@ class _TodoPageState extends State<TodoPage> {
         title: Text("TODO"),
       ),
       body: ListView.builder(
-        itemCount: _myTodoList.length,
+        itemCount: todoController.myTodoList.length,
         itemBuilder: (context, index) {
           return Card(
             elevation: 4,
@@ -29,7 +72,7 @@ class _TodoPageState extends State<TodoPage> {
               child: Column(
                 children: <Widget>[
                   Text(
-                    _myTodoList[index].text,
+                    todoController.myTodoList[index].text,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 18),
@@ -40,71 +83,13 @@ class _TodoPageState extends State<TodoPage> {
                       IconButton(
                         icon: Icon(Icons.edit),
                         onPressed: () {
-                          var oldid = _myTodoList[index].id;
-                          var oldtext = _myTodoList[index].text;
-                          _textController.text = oldtext;
                           showDialog(
                             context: context,
                             builder: (context) {
-                              return Dialog(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: <Widget>[
-                                    //textbox
-                                    Padding(
-                                      padding:
-                                          EdgeInsets.only(left: 5, right: 5),
-                                      child: TextField(
-                                        controller: _textController,
-                                        decoration: InputDecoration(
-                                          hintText: "Enter your task",
-                                        ),
-                                      ),
-                                    ),
-                                    //button
-                                    Padding(
-                                      padding: EdgeInsets.only(top: 10),
-                                      child: RaisedButton(
-                                        onPressed: () {
-                                          if (_textController.text.isEmpty) {
-                                            showDialog(
-                                                context: context,
-                                                builder: (context) {
-                                                  return Dialog(
-                                                    child: Column(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: <Widget>[
-                                                        Text(
-                                                            "Please enter Something"),
-                                                        RaisedButton(
-                                                          onPressed: () =>
-                                                              Navigator.pop(
-                                                                  context),
-                                                          child: Text("Close"),
-                                                        )
-                                                      ],
-                                                    ),
-                                                  );
-                                                });
-                                          } else {
-                                            _myTodoList.removeWhere((t) =>
-                                                t.id == _myTodoList[index].id);
-                                            _myTodoList.add(
-                                              Todo(
-                                                  id: oldid,
-                                                  text: _textController.text),
-                                            );
-                                            Navigator.pop(context);
-                                            _textController.clear();
-                                            setState(() {});
-                                          }
-                                        },
-                                        child: Text("Submit"),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                              return appForm(
+                                initialText:
+                                    todoController.myTodoList[index].text,
+                                editid: todoController.myTodoList[index].id,
                               );
                             },
                           );
@@ -113,8 +98,8 @@ class _TodoPageState extends State<TodoPage> {
                       IconButton(
                         icon: Icon(Icons.delete),
                         onPressed: () {
-                          _myTodoList.removeWhere(
-                              (element) => element.id == _myTodoList[index].id);
+                          todoController.delete(
+                              id: todoController.myTodoList[index].id);
                           setState(() {});
                         },
                       ),
@@ -133,40 +118,7 @@ class _TodoPageState extends State<TodoPage> {
           showDialog(
             context: context,
             builder: (context) {
-              return Dialog(
-                child: Form(
-                  key: _formkey,
-                  child: Column(
-                    children: <Widget>[
-                      Padding(
-                        padding: EdgeInsets.only(left: 5, right: 5),
-                        child: TextFormField(
-                          decoration:
-                              InputDecoration(hintText: "Enter your task"),
-                          onSaved: (String value) {
-                            newtodo.text = value;
-                          },
-                          validator: (value) =>
-                              value.isEmpty ? "please enter something" : null,
-                        ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.only(top: 10),
-                        child: RaisedButton(
-                          onPressed: () {
-                            newtodo.id =_myTodoList.length + 1;
-                            _myTodoList.add(newtodo);
-                            Navigator.pop(context);
-                            _textController.clear();
-                            setState(() {});
-                          },
-                          child: Text("Submit"),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
+              return appForm();
             },
           );
         },
